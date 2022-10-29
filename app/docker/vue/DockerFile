@@ -1,0 +1,24 @@
+# base image
+FROM node:lts
+
+# set working directory
+WORKDIR /var/www/front
+
+# add `/app/node_modules/.bin` to $PATH
+ENV PATH /app/node_modules/.bin:$PATH
+
+# install and cache app dependencies
+COPY ../../proje/front/package.json /var/www/front/package.json
+RUN npm install
+RUN npm install @vue/cli@3.7.0 -g
+
+COPY . /var/www/front
+
+EXPOSE 8091
+# start app
+CMD ["npm", "run", "build"]
+
+# * Install PM2 to serve the app
+# RUN npm install pm2 -g | pm2 serve ./dist/ 8091 --spa --watch && pm2 log
+
+# ? Serve the application on start

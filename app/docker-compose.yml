@@ -1,0 +1,95 @@
+version: "3.8"
+services:
+  # php laravel uygulaması
+  app:
+    build:
+      context: ./docker/php
+      dockerfile: DockerFile
+    container_name: laravel
+    working_dir: /var/www/back
+    expose:
+      - 8092
+    volumes:
+      - ./proje/back/:/var/www/back
+      - ./docker/php/www.conf:/usr/local/etc/php-fpm.d/www.conf
+      - ./docker/php/php.ini:/usr/local/etc/php/php.ini
+    networks:
+      - app
+
+  # nginx web servisi
+  web:
+    # build:
+    #   context: ./docker/nginx
+    #   dockerfile: DockerFile
+    platform: linux/x86_64
+    image: nginx:1.13.8
+    container_name: nginx
+    working_dir: /var/www
+    volumes:
+      - ./proje/:/var/www/
+      - ./docker/nginx/conf.d/:/etc/nginx/conf.d/
+    volumes_from:
+      - app
+    depends_on:
+      - app
+    ports:
+      - 8091:80
+      - 8092:9000
+    networks:
+      - app
+  #front vue ön arayüz
+  client:
+    build:
+      context: ./proje/front
+      dockerfile: DockerFile
+    container_name: client
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+    ports:
+      - 8082:8082
+    working_dir: /var/www/front
+    volumes:
+      - "/var/www/front/node_modules"
+      - ./proje/front/:/var/www/front
+    tty: true
+    expose:
+      - 8091
+    networks:
+      - app
+
+  # mysql veritabanı
+  database:
+    image: mysql:5.7.29
+    container_name: mysql
+    restart: unless-stopped
+    tty: true
+    volumes:
+      - db:/var/lib/mysql
+      - ./docker/mysql/my.cnf:/etc/mysql/my.cnf
+    environment:
+      - "MYSQL_DATABASE=test"
+      - "MYSQL_ROOT_PASSWORD=root"
+    depends_on:
+      - app
+    ports:
+      - "3307:3306"
+    networks:
+      - app
+  #mysql arayüz
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: "pma"
+    restart: always
+    ports:
+      - "8081:80"
+    environment:
+      PMA_HOST: database
+      PMA_PORT: 3306
+    networks:
+      - app
+volumes:
+  db:
+#network
+networks:
+  app:
+    driver: bridge
